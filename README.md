@@ -1,2 +1,4 @@
 # everstone
-Repository for the Everstone app
+Repository for the Everstone app.
+
+Maxi Gorynski
