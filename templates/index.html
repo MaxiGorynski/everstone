@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- This tells the browser that the page is in UTF-8 encoding, which supports a wide range of characters -->
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- The viewport meta tag ensures that the page scales properly on mobile devices -->
+
+    <title>Everstone</title>
+    <!-- This is the title that appears on the browser tab -->
+
+    <style>
+        /* Basic CSS to style the page */
+        body {
+            font-family: Arial, sans-serif; /* Setting the font */
+            text-align: center; /* Centers text and elements */
+            margin-top: 50px; /* Adds space at the top of the page */
+        }
+        h1 {
+            font-size: 3em; /* Large font size for the heading */
+        }
+        button {
+            font-size: 1.5em; /* Larger font size for buttons */
+            margin-top: 20px; /* Adds space between the buttons and other content */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- This is the body of the HTML document, where visible content goes -->
+
+    <h1>Everstone</h1>
+    <!-- This is the main heading of the page, displayed at the top -->
+
+    <!-- Buttons for starting and stopping the recording -->
+    <button id="recordButton">Start Recording</button>
+    <!-- Button to start recording audio. It's linked to JavaScript code that will trigger recording -->
+
+    <button id="stopButton" disabled>Stop Recording</button>
+    <!-- Button to stop recording. It's initially disabled because recording hasn't started yet -->
+
+    <p id="status"></p>
+    <!-- A paragraph element that will display status messages, like "Recording..." or "File uploaded successfully!" -->
+
+    <!--Link to the recordings page -->
+    <p><a href="/recordings">Your Everstone Recordings</a></p>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const status = document.getElementById('status');
+
+        recordButton.addEventListener('click', async () => {
+            status.textContent = "Recording...";
+
+            // Define audio constraints to improve recording quality
+            const constraints = {
+                audio: {
+                    sampleRate: 44100,   // CD-quality audio (44.1 kHz)
+                    channelCount: 2      // Stereo sound (2 channels)
+                }
+            };
+
+            try {
+                // Access the user's microphone with constraints for better sound quality
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                mediaRecorder.start();
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                let recordingCount = 1; // Variable to keep track of the number of recordings
+
+                mediaRecorder.onstop = () => {
+                    status.textContent = "Recording stopped.";
+
+                    // Create a Blob from the recorded audio
+                    const blob = new Blob(recordedChunks, { type: 'audio/webm'});
+
+                    // Create the filename based on the recording count
+                    const filename = `recording${recordingCount}.webm`; // e.g., "recording1.webm"
+
+                    // Log the filename for debugging
+                    console.log("Filename to be uploaded:", filename);
+
+                    const formData = new FormData();
+                    formData.append('audio', blob, filename); // Use the numbered filename here
+
+
+                    // Send the recorded audio to the server
+                    fetch('/upload', {
+                        method: 'POST',
+                        body: formData,
+                    }).then(response => {
+                        if (response.ok) {
+                            status.textContent = "File uploaded successfully!";
+                        } else {
+                            status.textContent = "Upload failed.";
+                        }
+                    });
+                };
+
+
+                recordButton.disabled = true;
+                stopButton.disabled = false;
+            } catch (err) {
+                status.textContent = "Error: " + err.message;
+            }
+        });
+
+        stopButton.addEventListener('click', () => {
+            mediaRecorder.stop();
+            recordButton.disabled = false;
+            stopButton.disabled = true;
+        });
+    </script>
+</body>
+</html>

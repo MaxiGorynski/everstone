@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">  <!-- Character encoding for the document -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Responsive design for mobile devices -->
+    <title>Recorded Audio Files</title> <!-- Title of the page -->
+</head>
+<body>
+    <h1>Your Everstone Files</h1> <!-- Main heading of the page -->
+
+    <!-- Check if there are any audio files to display -->
+    {% if audio_files %}
+        <ul>
+            <!-- Loop through each audio file in the audio_files list -->
+            {% for file in audio_files %}
+                <li>
+                    <!-- Create a link to the audio file for downloading or playing -->
+                    <a href="{{ url_for('static', filename='uploads/' + file) }}">{{ file }}</a>
+                    <!-- Audio playback control for the audio file -->
+                    <audio controls>
+                        <source src="{{ url_for('static', filename='uploads/' + file) }}" type="audio/webm"> <!-- Change type if needed -->
+                        <!-- Fallback message if the browser does not support the audio tag -->
+                        Your browser does not support the audio tag.
+                    </audio>
+
+                    <!-- Input for renaming each audio file -->
+                    <form action="{{ url_for('rename_file') }}" method="POST" style="display:inline;">
+                        <input type="text" name="new_name" placeholder="New filename" required>
+                        <input type="hidden" name="old_name" value="{{ file }}">
+                        <button type="submit">Rename</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <!-- Message displayed when no audio recordings are found -->
+        <p>No audio recordings found.</p>
+    {% endif %}
+
+    <!-- Link to navigate back to the main page -->
+    <a href="/">Go back to the main page</a>
+</body>
+</html>
