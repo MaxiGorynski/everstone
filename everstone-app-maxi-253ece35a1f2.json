@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "everstone-app-maxi",
+  "private_key_id": "253ece35a1f2027c45e833937184be6ecb2d6777",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5cQ4HCEE+OBp/\nQa+sPmKxVMlMdfCSTFvMoZn8pivM1v2Tlw2vSOVZV014h8bWtGbYzWJsbuBPrBhX\nnfKKvbshQmMb1Z61Ea/5pKXJ3b+UZokqVeqGZJ8+nyo+AMvOm32gaZvZBOJcQL27\nURf7NzXqYZg8+x2qlk5wVkh/0BbbFrOHFqd90bkSoULn2YhpR39PkRC9nZbsWNss\nRJcm0xaFxMOo57jERi3PwS1A9nxdWITWsmxOgjB/SNwmtOloyZvGUZcSXTPxMPX+\nJp2MfNSn4k/sIFCmdiANq/kaS/amlQ2pjO2sUK4EV7Hn8TALIqk/nNnIBQE4f0jl\nXgcBZW2PAgMBAAECggEAPBpZWowhYUIbzG0EvAXIRQNe7uo226PmCO/DkfBlt9Fi\nhIhrxgkRVKCIGm2fU41K3C/NG6ngB9KWXSdzKeaOlRwINUhKVRNzfq0PktrNMhL9\nl/watA4+0rQRo+DsLX2V/Pzdpzv/BblyBRkmdaSSU/HnvrQBDH4E1EIS42IVVlJ6\nkx4whoy0yjJQPbvGw9/lUSmYHIpRNQquINxr26ZJ/mZ6XhdX9UXCwb12aC1sdeSJ\niob0RkJaGSUGfuI3vfnOO3BFL7aU+sfoGqHOlCYx+Gm6WUxOezAMQMnbzsxpPCus\n813jcbbyy1MLVj4rZCyLNpHLLBoJwKVYTX5NCe9f6QKBgQDsBHitoVWoH7iW7A/4\nzvcBWIdyzqSGCQTPO1a6v5tIcT3+WbK4K0GGYa543HeXDsHJVWjtWUk7t1J3KjrY\nfzgr6y8nNimjQ0lqyfu7csTAGM67GJRscsv/b6YEON6vHbalgzWOytuKf12tNWEo\n4OxceO04e9ku28KjfHASuVeEtQKBgQDJJGJSdbmf44FFYgaQIA+1mNnZ1MQvInV6\nMBNrO4bxnRuhOvyrgIT/RavsCq9cobNWy98465K9kGyz7dMpAJfbtTZdG3EhnT/v\niyk915FFWcwpwS7gH0o/RJUzjlMW9Rko4Bps1G++y9VPwUKY5UAbD0CGN7Q97n6d\nQKTW4iX3swKBgBDA0IAir53bgpLT9t5GcqoZyqOPn4YUJc8/+wwOhctCno/rdhA0\nodYUIPpbS/HhDkhoU6ZlbBldDfF/geXUQfx8GUDDS3lXUWLPK5tGrkikeig1unNo\nQqrDFhm+n6/2f/yHr8mPBL50BAZDf74TGTQHMW+M+wGkf9BzCNGLbnbxAoGBAKf2\n+SAQ7ORmsAGHfSGHlHa54Fm2Aem2ZdGWKfEm8WX8IyF9R5fTp7wfqxReS9gXs9Hs\nR0iZ95zS6ONL20RnGWjAJ1iS3OMMFGLtm4/n3ojCFupbRtCjcHXqyIkX9ay7Gbp3\ngbmVoIb8YfHK2dkhv2mZT/GEvL/m09ZvL/e9O6VfAoGAH39JK+BPZbclz9RQiR8X\nvEt2DdsfGKJRuAN2/TbDePulczjK0BzSCeTSgXWoFw2rBHrB7ilm7ezDuLmtXaX8\nadz0dCng3sdSPty0YBW2kDbZsbNmF+YQtp3+scZDzfB1RRlfuSqKrYuICLZdHpA8\neiR73uhDj8efNXSfm2UEDlw=\n-----END PRIVATE KEY-----\n",
+  "client_email": "everstone-speech-to-text-admin@everstone-app-maxi.iam.gserviceaccount.com",
+  "client_id": "116496821347763913389",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/everstone-speech-to-text-admin%40everstone-app-maxi.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
