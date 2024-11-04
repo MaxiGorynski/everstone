@@ -1,0 +1,57 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+myenv/
+venv/
+ENV/
+env/
+
+# Flask instance folder
+instance/
+*.sqlite3
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+.eggs/
+*.egg-info/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs
+*.log
+
+# Pytest cache
+.cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+
+# IDE/editor folders and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+
+# Ignore all installed packages in site-packages
+site-packages/
+lib/
+
+# Ignore other unwanted files
+*.db
+*.sqlite3
+*.log
+*.json
+*.csv
+*.xls
+*.xlsx
