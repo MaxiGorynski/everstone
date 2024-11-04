@@ -1,6 +1,9 @@
 import json
 import os
+
+import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string
+from markupsafe import Markup
 import speech_recognition as sr
 from pydub import AudioSegment
 import noisereduce as nr
@@ -11,6 +14,7 @@ import string
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from rank_bm25 import BM25Okapi
+from sentence_transformers import SentenceTransformer
 
 #Dowloading NLTK data
 nltk.download('punkt')
@@ -67,12 +71,39 @@ def recordings():
 #Route to review recordings and transcript (e3a)
 @app.route('/review/<filename>', methods=['GET', 'POST'])
 def review_recording(filename):
-    transcript = None
-    if request.method == 'POST':
-        # Generate transcript only if the button is clicked
-        transcript = generate_transcript_webm(filename)
+    # Load existing transcripts data
+    transcripts_data = load_transcripts_data()
+    # Log to verify function is being entered
+    print("Entering review_recording with filename: ", filename)
 
-    return render_template('review_recording.html', filename=filename, transcript=transcript)
+    # Get the search term from the query parameter
+    search_term = request.args.get('search_term', '')
+    print("Search term received: ", search_term)
+
+    # Check if the transcript already exists for the specified file
+    transcript = next((entry['transcript'] for entry in transcripts_data if entry['filename'] == filename), None)
+    print("Initial transcript fetched:", transcript)
+
+    # If no transcript is found, generate it
+    if not transcript:
+        transcript = generate_transcript_webm(filename)
+        # Add the new transcript data to the JSON file
+        save_transcript_data(filename, transcript)
+        print("Transcript generated:", transcript)
+
+    # Highlight the search term in transcript if present
+    if search_term:
+        highlighted_transcript = transcript.replace(search_term, f"<b>{search_term}</b>")
+        highlighted_transcript = Markup(highlighted_transcript)  # Mark the text as safe HTML for rendering
+        print("Highlighted transcript:", highlighted_transcript)
+    else:
+        highlighted_transcript = transcript
+        print("No search term to highlight. Transcript unchanged.")
+
+    # Return the highlighted transcript instead of the original transcript
+    return render_template('review_recording.html', filename=filename, transcript=highlighted_transcript)
+
+
 
 
 def preprocess_audio(file_path):
@@ -82,7 +113,7 @@ def preprocess_audio(file_path):
     #Normalise the volume
     normalised_audio = audio.apply_gain(-audio.max_dBFS)
 
-    #Export the ormalised audio to a temporary file
+    #Export the normalised audio to a temporary file
     temp_file_path = 'temp.wav'
     normalised_audio.export(temp_file_path, format='wav')
 
@@ -113,17 +144,25 @@ def save_transcript_data(filename, transcript_text):
     else:
         transcripts_data = []
 
-    # Add the new transcript entry
-    new_entry = {
+    #Create a set for existing filenames
+    existing_filenames = {entry['filename'] for entry in transcripts_data}
+
+    if filename not in existing_filenames:
+        new_entry = {
         "filename": filename,
         "url": url,
-        "transcript": transcript_text
+        "transcript": transcript_text,
+        "embedding": []
     }
-    transcripts_data.append(new_entry)
+        transcripts_data.append(new_entry)
+        print(f"Adding new entry, {new_entry}")
 
-    # Write back to the JSON file
-    with open(json_file_path, 'w') as file:
-        json.dump(transcripts_data, file, indent=4)
+        # Write back to the JSON file
+        with open(json_file_path, 'w') as file:
+            json.dump(transcripts_data, file, indent=4)
+            #print(f"Saved transcripts_data.json with {len(transcripts_data)} entries.")
+    else:
+        print(f"Transcript for {filename} already exists.")
 
 #Generates a transcript using SpeechRecognition
 def generate_transcript_webm(filename):
@@ -139,6 +178,7 @@ def generate_transcript_webm(filename):
             audio_data = recogniser.record(source)
 
         transcript = recogniser.recognize_google(audio_data)
+        print(f"Generated transcript: {transcript}")
 
         # Clean up the temporary file
         os.remove(wav_file_path)
@@ -159,12 +199,41 @@ def generate_transcript_webm(filename):
 def load_transcripts_data(filepath="transcripts_data.json"):
     with open(filepath, 'r') as file:
         transcripts_data = json.load(file)
-    return transcripts_data
+        #print(transcripts_data)
 
-#Load data once on app startup
+    #Use a set to track unique filenames
+    seen = set()
+    unique_transcripts = []
+
+    for entry in transcripts_data:
+        if entry['filename'] not in seen:
+            seen.add(entry['filename'])
+            unique_transcripts.append(entry)
+
+    return unique_transcripts
+
+def generate_transcripts_for_all_files():
+    #List all .webm files in the UPLOAD_FOLDER
+    for filename in os.listdir(UPLOAD_FOLDER):
+        if filename.endswith('.webm'):
+            if not transcript_exists(filename):
+                print(f"Generating transcript for {filename}.")
+                generate_transcript_webm(filename)
+
+def transcript_exists(filename):
+    #Load existing transcripts data
+    transcripts_data = load_transcripts_data()
+
+    #Check if the filename exists in the transcripts data
+    return any(entry['filename'] == filename for entry in transcripts_data)
+
+#Load transcripts data once on app startup
 transcripts_data = load_transcripts_data()
 
-#################### e4 zone ####################
+#Generate transcripts for all audio files upon startup
+generate_transcripts_for_all_files()
+
+#################### e4.1 zone, BM25 ####################
 
 #Route to pre-processing text function (e4)
 def preprocess_text(text):
@@ -181,23 +250,52 @@ def prepare_bm25_data(transcripts_data):
     bm25_corpus = []
     for entry in transcripts_data:
         processed_text = preprocess_text(entry["transcript"])
-        bm25_corpus.append("".join(processed_text))
+        bm25_corpus.append(processed_text)
     return bm25_corpus
 
 #Preprocess and save BM25 data for later usage
 def load_and_prep_data():
     transcripts_data = load_transcripts_data()
-    bm25_corpus = prepare_bm25_data(transcripts_data)
 
+    #Check if transcripts is empty
+    if not transcripts_data:
+        print("No transcripts found. Please add transcripts.")
+        return [], None #Return empty list and None for bm25
+
+    bm25_corpus = prepare_bm25_data(transcripts_data)
+    bm25 = BM25Okapi(bm25_corpus) #Initialising BM25 with tokenised corpus
+    # Print the structure of bm25_corpus to check it
+    #print(bm25_corpus[:2])  # Print the first two entries to verify
     #Storing the preprocessed data
-    return transcripts_data, bm25_corpus
+    return transcripts_data, bm25
+
+
 
 #Initialising preprocessing outside of the function, for global access, and so we only have to pre-process once,
 #...instead of during every search
-transcripts_data, bm25_corpus = load_and_prep_data()
+transcripts_data, bm25 = load_and_prep_data()
 
-#Initialising bm25 with preprocessed corpus
-bm25 = BM25Okapi(bm25_corpus)
+def test_bm25(query):
+    preprocessed_query = preprocess_text(query)
+    scores = bm25.get_scores(preprocessed_query)
+
+    #Print scores to verify
+    #for idx, score in enumerate(scores):
+        #print(f"Transcript {idx + 1}: Score {score}")
+
+#test_bm25("test")
+
+def debug_bm25():
+    #Minimal corpus example for direct BM25 testing
+    mini_corpus = [["this", "is", "a", "test"], ["another", "test", "case"]]
+    bm25_test = BM25Okapi(mini_corpus)
+    sample_query = ["test"]
+
+    #Get scores for sample query
+    sample_scores = bm25_test.get_scores(sample_query)
+    #print("Sample corpus scores:", sample_scores)
+
+debug_bm25()
 
 def bm25_search(query):
     query_tokens = preprocess_text(query) #Process the query like we did transcripts
@@ -210,28 +308,70 @@ def bm25_search(query):
 
 def search_bm25(query, transcripts_data):
     #Preprocess the query
-    preprocessed_query = preprocess_text(query)
-    query_tokens = preprocessed_query.split()
+    preprocessed_query = preprocess_text(query) #Tokenised as list
+    scores = bm25.get_scores(preprocessed_query) #Return a list of scores
 
-    #Prepare the corpus for BM25
-    corpus = [entry['trascript'] for entry in transcripts_data]
-    bm25 = BM25Okapi([preprocess_text(test).split() for text in corpus])
+    #Create sorted results
+    results = sorted(
+        zip(scores, transcripts_data),
+        key= lambda x: x[0],
+        reverse=True
+    )
 
-    #Get scores for the query
-    scores = bm25.get_scores(query_tokens)
-
-    #Combine scores with the original data
-    results = sorted(zip(scores, transcripts_data), reverse=True, key=lambda x: x[0])
     return results
 
-#Create a search endpoint within the app
+#################### e4.2 zone, Embeddings ####################
 
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+def generate_embeddings(transcripts_data):
+    #Ensure transcripts_data is preprocessed or cleaned if needed
+    for entry in transcripts_data:
+        entry['embedding'] = embedding_model.encode(entry['transcript'])
+    return transcripts_data
+
+def save_transcripts_with_embeddings(transcripts_data):
+    #Convert ndarray to lists for JSON serialisation
+    for entry in transcripts_data:
+        if 'embedding' in entry:
+            if isinstance(entry['embedding'], np.ndarray):
+                #Convert ndarray to list
+                entry['embedding'] = entry['embedding'].tolist()
+
+    with open('transcripts_data.json', 'w') as file:
+        json.dump(transcripts_data, file, indent=4)
+
+#Function to check if we have transcripts and generate them if not
+def ensure_transcripts_exist():
+    #Load existing transcripts
+    transcripts_data = load_transcripts_data()
+
+    #If no transcripts are found, generate them
+    if not transcripts_data:
+        #Get all audio files from UPLOAD_FOLDER
+        audio_files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith('.webm')]
+
+        for audio_file in audio_files:
+            #Generate transcript for each audio file
+            transcript = generate_transcript_webm(audio_file)
+            print(f"Transcript for {audio_file}: {transcript}")
+
+    return load_transcripts_data()
+
+#Load transcripts/guarantee they exist
+transcripts_data = ensure_transcripts_exist()
+
+#Generate embeddings and save transcripts with embeddings
+transcripts_data = generate_embeddings(transcripts_data)
+save_transcripts_with_embeddings(transcripts_data)
+
+#Creating a search endpoint within the app
 @app.route('/search', methods=['POST'])
 def search():
     query = request.form['query']
     results = search_bm25(query, transcripts_data)
 
-    return render_template('search_results.html', results=results)
+    return render_template('search_results.html', results=results, search_term=query)
 
 #################### Marginal utilities ####################
 
@@ -269,4 +409,5 @@ def rename_file():
         return f"File '{old_name}' does not exist.", 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
+
