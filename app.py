@@ -415,7 +415,7 @@ def rename_file():
 def delete_recording(filename):
     #Delete the audio file
     file_path = os.path.join(UPLOAD_FOLDER, filename)
-    if os.path.exist(file_path):
+    if os.path.exists(file_path):
         os.remove(file_path)
         print(f"Deleted audio file {file_path}")
 
