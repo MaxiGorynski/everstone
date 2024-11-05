@@ -2,7 +2,7 @@ import json
 import os
 
 import librosa
-from flask import Flask, render_template, request, redirect, url_for, render_template_string
+from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
 from markupsafe import Markup
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -21,6 +21,8 @@ nltk.download('punkt')
 nltk.download('stopwords')
 
 app = Flask(__name__)
+
+app.secret_key = 'your_secret_key_here'
 
 # Define the uploads folder where recordings will be stored
 UPLOAD_FOLDER = 'static/uploads'  # Use static/uploads for consistent access
@@ -407,6 +409,31 @@ def rename_file():
         ''')
     else:
         return f"File '{old_name}' does not exist.", 404
+
+#Route to handle to file deletions
+@app.route('/delete_recording/<filename>', methods=['POST'])
+def delete_recording(filename):
+    #Delete the audio file
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    if os.path.exist(file_path):
+        os.remove(file_path)
+        print(f"Deleted audio file {file_path}")
+
+    #Load the existing transcript data
+
+    with open (TRANSCRIPTS_DATA_FILE, 'r') as file:
+        transcripts_data = json.load(file)
+
+    #Filter out the entry for the deleted file
+    transcripts_data = [entry for entry in transcripts_data if entry['filename'] != filename]
+
+    #Write the updated transcripts data back to the transcripts data file
+    with open (TRANSCRIPTS_DATA_FILE, 'w') as file:
+        json.dump(transcripts_data, file, indent=4)
+    print(f"Removed transcript for {filename}")
+
+    flash(f"Recording {filename} and its transcript have been deleted.")
+    return redirect(url_for('recordings'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
