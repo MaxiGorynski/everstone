@@ -1,0 +1,12 @@
+flask==2.3.2
+SpeechRecognition==3.9.0
+pydub==0.25.1
+noisereduce==2.0.1
+numpy==1.24.4
+soundfile==0.12.1
+nltk
+scikit-learn
+rank-bm25
+sentence-transformers
+markupsafe
+librosa
