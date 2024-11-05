@@ -18,6 +18,8 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
+from app import db
+from auth.models import User
 
 #Dowloading NLTK data
 nltk.download('punkt')
