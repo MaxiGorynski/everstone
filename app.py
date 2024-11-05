@@ -3,6 +3,9 @@ import os
 
 import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
+from flask_login import LoginManager
+from flask_sqlalchemy import SQLAlchemy
+from auth.routes import auth_bp
 from markupsafe import Markup
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -20,14 +23,24 @@ from sentence_transformers import SentenceTransformer
 nltk.download('punkt')
 nltk.download('stopwords')
 
+######## App Basics ########
 app = Flask(__name__)
-
 app.secret_key = 'your_secret_key_here'
+login_manager = LoginManager()
+login_manager.init_app(app)
 
 # Define the uploads folder where recordings will be stored
 UPLOAD_FOLDER = 'static/uploads'  # Use static/uploads for consistent access
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create uploads folder if it doesn't exist
 
+######## Database Basics ########
+
+#Configuring the DB in SQLite
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///everstone.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+#Initialising the DB
+db = SQLAlchemy(app)
 
 # Route for our main page (e1)
 @app.route('/')
