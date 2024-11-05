@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reviewing {{ filename }}</title>
+</head>
+<body>
+    <h1>Reviewing {{ filename }}</h1>
+
+    <audio controls>
+        <source src="{{ url_for('static', filename='uploads/' + filename) }}" type="audio/webm">
+        Your browser does not support this audio tag
+    </audio>
+
+    <h2>Transcript</h2>
+    {% if transcript %}
+        <div>{{ transcript|safe }}</div> <!-- The transcript will include bopld HTML tags for the search term -->
+    {% else %}
+        <form method="POST" action="">
+            <button type="submit">Generate Transcript</button>
+        </form>
+        <p>Click the button to generate the transcript.</p>
+    {% endif %}
+
+    <a href="/recordings">Back to all Everstone recordings</a>
+
+</body>
+</html>

@@ -15,7 +15,7 @@
             {% for file in audio_files %}
                 <li>
                     <!-- Create a link to the audio file for downloading or playing -->
-                    <a href="{{ url_for('static', filename='uploads/' + file) }}">{{ file }}</a>
+                    <a href="{{ url_for('review_recording', filename=file) }}">{{ file }}</a>
                     <!-- Audio playback control for the audio file -->
                     <audio controls>
                         <source src="{{ url_for('static', filename='uploads/' + file) }}" type="audio/webm"> <!-- Change type if needed -->

@@ -1,10 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
 </head>
 <body>
-$END$
+
+    <h1>Search Results</h1>
+
+    {% if results %}
+        <ul>
+            {% for score, entry in results%}
+                <li>
+                    <a href="{{ url_for('review_recording', filename=entry['filename'], search_term=search_term) }}">{{ entry['filename'] }}</a>
+                    <p>Score: {{ score }}</p>
+                </li>
+             {% endfor %}
+        </ul>
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
+
+    <a href="/">Back to Home</a>
+
 </body>
 </html>
