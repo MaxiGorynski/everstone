@@ -1,0 +1,12 @@
+# Ignore virtual environments and Python environment files
+myenv/
+.venv/
+ENV/
+env/
+*.py[cod]  # Ignore compiled Python files
+__pycache__/  # Ignore Python cache directories
+*.pyo
+*.pyd
+*.egg-info/
+# Ignore macOS system files
+.DS_Store
