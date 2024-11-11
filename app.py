@@ -3,7 +3,7 @@ import os
 
 import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user, login_required
 from flask_sqlalchemy import SQLAlchemy
 from markupsafe import Markup
 import speech_recognition as sr
@@ -15,6 +15,7 @@ import nltk
 from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
+from models import User, Recording, Transcript
 
 #Dowloading NLTK data
 nltk.download('punkt')
@@ -38,8 +39,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create uploads folder if it doesn't
 #Configuring the DB in SQLite
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True
-print("Curret Working Directory:", os.getcwd())
 
 #Initialising the DB
 db = SQLAlchemy(app)
@@ -52,6 +51,7 @@ def index():
 
 # Route to handle the file upload (e2)
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload():
     try:
         if 'audio' not in request.files:
@@ -68,6 +68,11 @@ def upload():
         # Save the file
         file.save(file_path)
 
+        #Create a new recording in the database, linked to current user
+        new_recording = Recording(filename=file.filename, user_id=current_user.id)
+        db.session.add(new_recording)
+        db.session.commit()
+
         return 'File uploaded successfully', 200
     except Exception as e:
         # Return the error message for debugging
@@ -77,16 +82,17 @@ def upload():
 
 # Route to display stored recordings (e3)
 @app.route('/recordings')
+@login_required
 def recordings():
-    # List all files in the uploads directory
-    audio_files = os.listdir(UPLOAD_FOLDER)
-    # Filter to only include audio files (to be expanded later)
-    audio_files = [f for f in audio_files if f.endswith('.webm')]
+    #Query the database for recordings belonging to the current user
+    user_recordings = Recording.query.filter_by(user_id=current_user.id).all()
+    audio_files = [rec.filename for rec in user_recordings]
 
     return render_template('recordings.html', audio_files=audio_files)
 
 #Route to review recordings and transcript (e3a)
 @app.route('/review/<filename>', methods=['GET', 'POST'])
+@login_required
 def review_recording(filename):
     # Load existing transcripts data
     transcripts_data = load_transcripts_data()
@@ -384,6 +390,7 @@ save_transcripts_with_embeddings(transcripts_data)
 
 #Creating a search endpoint within the app
 @app.route('/search', methods=['POST'])
+@login_required
 def search():
     query = request.form['query']
     results = search_bm25(query, transcripts_data)
@@ -394,6 +401,7 @@ def search():
 
 #Route to handle file renaming
 @app.route('/rename_file', methods=['POST'])
+@login_required
 def rename_file():
     old_name = request.form['old_name']
     new_name = request.form['new_name']
@@ -427,6 +435,7 @@ def rename_file():
 
 #Route to handle to file deletions
 @app.route('/delete_recording/<filename>', methods=['POST'])
+@login_required
 def delete_recording(filename):
     #Delete the audio file
     file_path = os.path.join(UPLOAD_FOLDER, filename)
