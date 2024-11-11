@@ -94,6 +94,11 @@ def recordings():
 @app.route('/review/<filename>', methods=['GET', 'POST'])
 @login_required
 def review_recording(filename):
+    #Query the database to find
+    recording = Recording.query.filter_by(filename=filename, user_id=current_user.id).first()
+    if not recording:
+        return "Recording not found."
+
     # Load existing transcripts data
     transcripts_data = load_transcripts_data()
     # Log to verify function is being entered
@@ -125,9 +130,6 @@ def review_recording(filename):
 
     # Return the highlighted transcript instead of the original transcript
     return render_template('review_recording.html', filename=filename, transcript=highlighted_transcript)
-
-
-
 
 def preprocess_audio(file_path):
     #Load the audio file
@@ -393,7 +395,10 @@ save_transcripts_with_embeddings(transcripts_data)
 @login_required
 def search():
     query = request.form['query']
-    results = search_bm25(query, transcripts_data)
+
+    #Filtering the transcripts data to only include entries owned by the user
+    user_transcripts_data = [entry for entry in transcripts_data if entry['user_id'] == current_user.id]
+    results = search_bm25(query, user_transcripts_data)
 
     return render_template('search_results.html', results=results, search_term=query)
 
@@ -401,7 +406,6 @@ def search():
 
 #Route to handle file renaming
 @app.route('/rename_file', methods=['POST'])
-@login_required
 def rename_file():
     old_name = request.form['old_name']
     new_name = request.form['new_name']
@@ -435,7 +439,6 @@ def rename_file():
 
 #Route to handle to file deletions
 @app.route('/delete_recording/<filename>', methods=['POST'])
-@login_required
 def delete_recording(filename):
     #Delete the audio file
     file_path = os.path.join(UPLOAD_FOLDER, filename)
