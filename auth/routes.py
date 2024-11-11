@@ -1,8 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required
+from flask import Blueprint, render_template, redirect, url_for, flash
+from flask_login import logout_user, login_required
 from .forms import RegistrationForm, LoginForm
-from .models import User
-from app import app, db #Assuming a database instance is initialised in app.py
+from everstone.models import User
 
 auth_bp = Blueprint('auth', __name__)
 

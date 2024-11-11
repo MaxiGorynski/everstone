@@ -5,7 +5,6 @@ import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
-from auth.routes import auth_bp
 from markupsafe import Markup
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -13,13 +12,9 @@ import noisereduce as nr
 import numpy as np
 import soundfile as sf  # Ensure soundfile is imported to write audio files
 import nltk
-import string
 from nltk.corpus import stopwords
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
-from app import db
-from auth.models import User
 
 #Dowloading NLTK data
 nltk.download('punkt')
@@ -30,6 +25,9 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
 login_manager = LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = 'login'  # Replace 'login' with the name of your login route
+
+
 
 # Define the uploads folder where recordings will be stored
 UPLOAD_FOLDER = 'static/uploads'  # Use static/uploads for consistent access
@@ -38,8 +36,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create uploads folder if it doesn't
 ######## Database Basics ########
 
 #Configuring the DB in SQLite
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///everstone.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = True
+print("Curret Working Directory:", os.getcwd())
 
 #Initialising the DB
 db = SQLAlchemy(app)
