@@ -402,6 +402,11 @@ def search():
 
     return render_template('search_results.html', results=results, search_term=query)
 
+#################### User Login ####################
+
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 #################### Marginal utilities ####################
 
 #Route to handle file renaming
