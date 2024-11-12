@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import json
 import os
 
@@ -17,7 +22,6 @@ import nltk
 from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
-from auth.routes import auth_bp
 
 #Table of Contents #
 ### NLTK Data ad App Basics ###
@@ -56,6 +60,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #Initialising the DB
 db = SQLAlchemy(app)
+bcrypt = Bcrypt()
 
 #Initialising Migrate
 migrate = Migrate()
@@ -494,7 +499,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/site.db'
 
     db.init_app(app)  # Initialize the database
-    Bcrypt.init_app(app)
+    bcrypt.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
@@ -502,6 +507,7 @@ def create_app():
    ### login_manager.login_view = 'auth.login'###
 
     # Register blueprints
+    from everstone.auth.routes import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the authentication blueprint
 
     return app

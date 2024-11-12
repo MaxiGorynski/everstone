@@ -3,7 +3,8 @@ from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import logout_user, login_required, login_user
 from flask_bcrypt import Bcrypt
 from .forms import RegistrationForm, LoginForm
-from .models import User
+from everstone.models import db, User
+
 
 auth_bp = Blueprint('auth', __name__)
 

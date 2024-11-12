@@ -1,6 +1,8 @@
 from flask_login import UserMixin
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db
+
+db = SQLAlchemy() #Initialising SQLAlchemy instance here instead of importing from app, to avoid circular imports
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -30,6 +32,6 @@ class Recording(db.Model):
 
 class Transcript(db.Model):
     __tablename__ = 'transcript'
-    id = db.Column(db.Integer, primary_key = True)
+    id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     transcript_id = db.Column(db.Integer, db.ForeignKey('recordings.id'), nullable=False)
