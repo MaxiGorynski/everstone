@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db, app
+from app import db
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -28,7 +28,7 @@ class Recording(db.Model):
     content = db.Column(db.Text, nullable=False)
     recording_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-class Transcript(db.model):
+class Transcript(db.Model):
     __tablename__ = 'transcript'
     id = db.Column(db.Integer, primary_key = True)
     content = db.Column(db.Text, nullable=False)

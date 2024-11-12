@@ -5,6 +5,8 @@ import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
 from flask_login import LoginManager, current_user, login_required
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_migrate import Migrate, migrate
 from markupsafe import Markup
 import speech_recognition as sr
 from pydub import AudioSegment
@@ -15,7 +17,22 @@ import nltk
 from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
-from models import User, Recording, Transcript
+from models import User, Recording, Transcript, db
+from auth.routes import auth_bp
+
+#Table of Contents #
+### NLTK Data ad App Basics ###
+### Uploads Folder and Database Basics ###
+### E1 - Route for Our Main Page ###
+### E2 - Route to handle file uploading ###
+### E3 - Route to display stored recordings ###
+### E3A - Route to review recordings and transcript, incl. preprocessing, loading and generating webm files ###
+### E4 - BM25 Search ###
+### E4.2 - Embeddings ###
+### E5 - User Login & Auth ###
+### E0 - Marginal Utilities, including file deletion, file renaming ###
+### E-X - Initialising the App/App Factory ###
+
 
 #Dowloading NLTK data
 nltk.download('punkt')
@@ -23,12 +40,10 @@ nltk.download('stopwords')
 
 ######## App Basics ########
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'EverstoneSki24'
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'  # Replace 'login' with the name of your login route
-
-
 
 # Define the uploads folder where recordings will be stored
 UPLOAD_FOLDER = 'static/uploads'  # Use static/uploads for consistent access
@@ -43,7 +58,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 #Initialising the DB
 db = SQLAlchemy(app)
 
-# Route for our main page (e1)
+#Initialising Migrate
+migrate = Migrate()
+
+################# Route for our main page (e1) #################
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -402,12 +420,12 @@ def search():
 
     return render_template('search_results.html', results=results, search_term=query)
 
-#################### User Login ####################
+#################### E5 - User Login ####################
 
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-#################### Marginal utilities ####################
+#################### E0 - Marginal utilities ####################
 
 #Route to handle file renaming
 @app.route('/rename_file', methods=['POST'])
@@ -467,6 +485,29 @@ def delete_recording(filename):
     flash(f"Recording {filename} and its transcript have been deleted.")
     return redirect(url_for('recordings'))
 
+#################### E-X - App Initialisation ####################
+
+#Refactored app initialisation through an app factory pattern, which keeps us safe for scale
+
+def create_app():
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = 'EverstoneSki24'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/site.db'
+
+    db.init_app(app)  # Initialize the database
+    Bcrypt.init_app(app)
+    login_manager.init_app(app)
+    migrate.init_app(app, db)
+
+    ###login_manager = LoginManager(app)###
+   ### login_manager.login_view = 'auth.login'###
+
+    # Register blueprints
+    app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the authentication blueprint
+
+    return app
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app = create_app()  # Calling our factory function
+    app.run(host='0.0.0.0', port=5001, debug=True)  # Start the app
 
