@@ -17,7 +17,6 @@ import nltk
 from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
-from models import User, Recording, Transcript, db
 from auth.routes import auth_bp
 
 #Table of Contents #
