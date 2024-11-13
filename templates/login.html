@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Everstone</title>
+</head>
+<body>
+    <h1>Login to Your Everstone Account</h1>
+
+    <form method="POST" action="{{ url_for('auth.login') }}">
+        {{ form.hidden_tag }} <!-- Includes CSRF token as proof this login is not an attack -->
+        <div>
+            <label for="email">EmailL:</label>
+            <input type="email" name="email" id="email" required>
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" required
+        </div>
+        <div>
+            <label for="remember">Remember Me:</label>
+            <input type="checkbox" name="remember" id="remember">
+        </div>
+        <button type="submit">Login</buttontype></button>
+    </form>
+    <p></p>Don't have a account? <a href="{{url_for('auth.register') }}">Register Here</a>.</p>
+</body>
+</html>

@@ -121,7 +121,7 @@ def create_app():
     # @login_required
     def recordings():
         if not current_user.is_authenticated:
-            return redirect(url_for('auth_login'))
+            return redirect(url_for('auth.login'))
 
         # Query the database for recordings belonging to the current user
         user_recordings = Recording.query.filter_by(user_id=current_user.id).all()

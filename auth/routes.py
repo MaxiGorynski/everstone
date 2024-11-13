@@ -18,18 +18,28 @@ def register():
         login_user(user)
         flash('Account created successfully!', 'success')
         return redirect(url_for('auth.login'))
-    return render_template('register.html', form=form)
+    return render_template('login.html', form=form)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
+        print("Form validated successfully.") #Debug
         user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(user.password, form.password.data):
+        if user:
+            print(f"Found user: {user.username}") #Debug, confirm user
+        else:
+            print("User not found.") #Debug, confirms no user
+        if user and bcrypt.check_password_hash(user.password_hash, form.password.data):
+            print(f"User '{user.username}' authenticated successfully.") #Debug
+
+            print("Attempting to log user in...") #Debug before login_user call
             login_user(user, remember=form.remember.data)
+            print("User logged in successfully.")
             flash('Logged in successfully.', 'success')
             return redirect(url_for('index')) #Used to be return redirect(url_for('main.index'))
         else:
+            print("Authentication failed. Incorrect credentials.")
             flash('Login failed. Please check credentials', 'danger')
     return render_template('login.html', form=form)
 
