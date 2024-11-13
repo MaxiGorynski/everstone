@@ -36,50 +36,60 @@ from sentence_transformers import SentenceTransformer
 ### E5 - User Login & Auth ###
 ### E0 - Marginal Utilities, including file deletion, file renaming ###
 
-# Downloading NLTK data
-nltk.download('punkt')
-nltk.download('stopwords')
+######## Database Basics ########
+#Initialising the DB
+db = SQLAlchemy(app)
+bcrypt = Bcrypt()
 
-# Initialize extensions from extensions.py
-from everstone.extensions import db, bcrypt, login_manager, migrate
+#Initialising Migrate
+migrate = Migrate()
 
-UPLOAD_FOLDER = 'static/uploads'
+######## App Basics ########
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'  # Replace 'login' with the name of your login route
+
+# Define the uploads folder where recordings will be stored
+UPLOAD_FOLDER = 'static/uploads'  # Use static/uploads for consistent access
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create uploads folder if it doesn't exist
 
-# Define the app factory function
+#################### E-X - App Initialisation ####################
+
+#Refactored app initialisation through an app factory pattern, which keeps us safe for scale
+
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'EverstoneSki24'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/site.db'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Initialize extensions with app context
-    db.init_app(app)
+    db.init_app(app)  # Initialize the database
     bcrypt.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
 
-    login_manager.login_view = 'auth.login'
+    ###login_manager = LoginManager(app)###
+   ### login_manager.login_view = 'auth.login'###
 
     # Register blueprints
     from everstone.auth.routes import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(auth_bp, url_prefix='/auth')  # Register the authentication blueprint
 
     return app
 
-# Create the Flask app using the factory pattern
-app = create_app()
+#Dowloading NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
+
+######## Creating App and Database ########
+app = create_app() #Used to be app = Flask(__name__)
+app.secret_key = 'EverstoneSki24'
+
+#Configuring the DB in SQLite
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 ################# Route for our main page (e1) #################
-
-@app.before_request
-def print_routes():
-    print("\nRegistered Routes:")
-    for rule in app.url_map.iter_rules():
-        print(f"Endpoint: {rule.endpoint}, URL: {rule}\n")
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return "404 Error: The page you are trying to access does not exist."
 
 @app.route('/')
 def index():

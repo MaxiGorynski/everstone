@@ -1,15 +1,14 @@
-import bcrypt
+from everstone import bcrypt
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import logout_user, login_required, login_user
-from flask_bcrypt import Bcrypt
 from .forms import RegistrationForm, LoginForm
-from everstone.models import db, User
 
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    from everstone.models import db, User
     form = RegistrationForm()
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
@@ -29,7 +28,7 @@ def login():
         if user and bcrypt.check_password_hash(user.password, form.password.data):
             login_user(user, remember=form.remember.data)
             flash('Logged in successfully.', 'success')
-            return redirect(url_for('main.index')) #Used to be return redirect(url_for('main.index'))
+            return redirect(url_for('index')) #Used to be return redirect(url_for('main.index'))
         else:
             flash('Login failed. Please check credentials', 'danger')
     return render_template('login.html', form=form)
