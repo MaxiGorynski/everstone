@@ -1,4 +1,4 @@
-from everstone import bcrypt
+from everstone.extensions import bcrypt
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import logout_user, login_required, login_user
 from .forms import RegistrationForm, LoginForm
