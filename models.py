@@ -1,8 +1,6 @@
 from flask_login import UserMixin
-from flask_sqlalchemy import SQLAlchemy
+from everstone.extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
-
-db = SQLAlchemy() #Initialising SQLAlchemy instance here instead of importing from app, to avoid circular imports
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -27,11 +25,11 @@ class User(UserMixin, db.Model):
 class Recording(db.Model):
     __tablename__ = 'recordings'
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    recording_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    filename = db.Column(db.Text, nullable=False) # This was previously 'content'
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) # This was previously 'recording_id'
 
 class Transcript(db.Model):
-    __tablename__ = 'transcript'
+    __tablename__ = 'transcripts'
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    transcript_id = db.Column(db.Integer, db.ForeignKey('recordings.id'), nullable=False)
+    recording_id = db.Column(db.Integer, db.ForeignKey('recordings.id'), nullable=False) # This was previously 'transcript_id'
