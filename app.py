@@ -11,7 +11,7 @@ import os
 import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
 from flask_login import LoginManager, current_user, login_required
-from everstone.models import Recording
+from everstone.models import Recording, Transcript
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate, migrate
@@ -254,6 +254,23 @@ def create_app():
                 # print(f"Saved transcripts_data.json with {len(transcripts_data)} entries.")
         else:
             print(f"Transcript for {filename} already exists.")
+
+        #Saving transcript to database
+        recording = Recording.query.filter_by(filename=filename).first()
+        if recording:
+            existing_transcript = Transcript.query.filter_by(recording_id=recording.id).first()
+            if not existing_transcript:
+                new_transcript = Transcript(
+                    content=transcript_text,
+                    recording_id=recording.id
+                )
+                db.session.add(new_transcript)
+                db.session.commit()
+                print(f"Transcript for recording {filename} saved to database.")
+            else:
+                print(f"Transcript for recording {filename} already exists.")
+        else:
+            print(f"Recording with filename {filename} not found in the database.")
 
     # Generates a transcript using SpeechRecognition
     def generate_transcript_webm(filename):
