@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
 class Recording(db.Model):
     __tablename__ = 'recordings'
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.Text, nullable=False) # This was previously 'content'
+    filename = db.Column(db.String(255), nullable=False) # This was previously 'content'
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False) # This was previously 'recording_id'
 
 class Transcript(db.Model):

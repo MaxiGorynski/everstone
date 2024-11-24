@@ -1,6 +1,8 @@
 import sys
 import os
 
+from werkzeug.utils import secure_filename
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import json
@@ -9,6 +11,7 @@ import os
 import librosa
 from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
 from flask_login import LoginManager, current_user, login_required
+from everstone.models import Recording
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate, migrate
@@ -52,6 +55,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create uploads folder if it doesn't
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'EverstoneSki24'
+    app.config['UPLOAD_FOLDER'] = 'static/uploads'
+    upload_folder = app.config['UPLOAD_FOLDER']
+    os.makedirs(upload_folder, exist_ok=True) #Ensure the directory exists
     basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(basedir, 'instance', 'site.db')}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -90,27 +96,42 @@ def create_app():
     @login_required
     def upload():
         try:
-            if 'audio' not in request.files:
-                return 'No file part', 400
+            # Sets the upload folder if not set
+            app.config['UPLOAD_FOLDER'] = 'static/uploads'
+            upload_folder = app.config['UPLOAD_FOLDER']
+            os.makedirs(upload_folder, exist_ok=True)  # Ensure the directory exists
 
-            file = request.files['audio']
+            #Does the audio component of the request exist?
+            if 'audio' not in request.files:
+                flash('No audio file part', 'danger')
+                return redirect(url_for('index'))
+
+            audio_file = request.files['audio']
+            if audio_file.filename == '':
+                flash('No selected file', 'danger')
+                return redirect(url_for('index'))
 
             upload_folder = 'static/uploads'
             os.makedirs(upload_folder, exist_ok=True)  # Creates the directory if it doesn't already exist
 
-            # Construct the full file path
-            file_path = os.path.join(upload_folder, file.filename)
-
-            # Save the file
-            file.save(file_path)
+            # Construct the full file path and save the file
+            if audio_file:
+                filename = secure_filename(audio_file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                audio_file.save(filepath)
 
             # Create a new recording in the database, linked to current user
-            new_recording = Recording(filename=file.filename, user_id=current_user.id)
-            db.session.add(new_recording)
-            db.session.commit()
+                new_recording = Recording(filename=audio_file.filename, user_id=current_user.id)
+                db.session.add(new_recording)
+                db.session.commit()
 
-            return 'File uploaded successfully', 200
+                flash('File uploaded successfully!', 'success')
+                return redirect(url_for('recordings'))
+
+            flash('Upload failed.', 'danger')
+            return redirect(url_for('index'))
         except Exception as e:
+            print(f"Error during upload: {e}")
             # Return the error message for debugging
             return f'Error: {str(e)}', 500
 
@@ -157,6 +178,12 @@ def create_app():
             # Add the new transcript data to the JSON file
             save_transcript_data(filename, transcript)
             print("Transcript generated:", transcript)
+
+            #Save the transcript to the database
+            new_transcript = Transcript(content=transcript, recording_id=recording.id)
+            db.session.add(new_transcript)
+            db.session.commit()
+            print("Transcript saved to database")
 
         # Highlight the search term in transcript if present
         if search_term:
