@@ -9,7 +9,7 @@
     <h1>Login to Your Everstone Account</h1>
 
     <form method="POST" action="{{ url_for('auth.login') }}">
-        {{ form.hidden_tag }} <!-- Includes CSRF token as proof this login is not an attack -->
+        {{ form.hidden_tag() }} <!-- Includes CSRF token as proof this login is not an attack -->
         <div>
             <label for="email">EmailL:</label>
             <input type="email" name="email" id="email" required>
