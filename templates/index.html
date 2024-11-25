@@ -1,3 +1,6 @@
+{% extends 'base.html' %}
+
+{% block content %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,10 +31,8 @@
 </head>
 
 <body>
-    <!-- This is the body of the HTML document, where visible content goes -->
-
-    <h1>Everstone</h1>
     <!-- This is the main heading of the page, displayed at the top -->
+    <h1>Everstone</h1>
 
     <!-- Buttons for starting and stopping the recording -->
     <button id="recordButton">Start Recording</button>
@@ -128,3 +129,4 @@
     </form>
 </body>
 </html>
+{% endblock %}

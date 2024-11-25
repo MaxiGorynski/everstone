@@ -493,6 +493,7 @@ def create_app():
 
     # Route to handle file renaming
     @app.route('/rename_file', methods=['POST'])
+    @login_required
     def rename_file():
         old_name = request.form['old_name']
         new_name = request.form['new_name']
@@ -500,55 +501,78 @@ def create_app():
         if not new_name.endswith('.webm'):
             new_name += '.webm'
 
-        upload_folder = 'static/uploads'
+        upload_folder = app.config['UPLOAD_FOLDER']
         old_file_path = os.path.join(upload_folder, old_name)
         new_file_path = os.path.join(upload_folder, new_name)
 
         # Check if the old file exists before renaming
-        if os.path.exists(old_file_path):
-            # Check if the new file already exists
-            if os.path.exists(new_file_path):
-                return f"File '{new_name}' already exists. Choose a different name.", 400
-            os.rename(old_file_path, new_file_path)  # Rename the file
-            return render_template_string('''
-                <html>
-                    <head>
-                        <meta http-equiv="refresh" content="2;url=recordings">
-                    </head>
-                    <body>
-                        <h1>File renamed successfully!</h1>
-                        <p> You will be redirect in 3,2...</p>
-                    </body>
-                </html>
-            ''')
-        else:
+        if not os.path.exists(old_file_path):
             return f"File '{old_name}' does not exist.", 404
+
+        if os.path.exists(new_file_path):
+            return f"File '{new_name}' already exists. Choose a different name.", 400
+
+        os.rename(old_file_path, new_file_path)
+
+        from everstone.models import Recording
+        recording = Recording.query.filter_by(filename=old_name, user_id=current_user.id).first()
+
+        if recording:
+            recording.filename = new_name
+            db.session.commit()
+            print(f"Recording renamed in the database: {old_name} -> {new_name}")
+        else:
+            return f"Recording with filename '{old_name}' not found in the database.", 404
+
+        return render_template_string('''
+            <html>
+                <head>
+                    <meta http-equiv="refresh" content="2;url=recordings">
+                </head>
+                <body>
+                    <h1>File renamed successfully!</h1>
+                    <p> You will be redirect in 3,2...</p>
+                </body>
+            </html>
+        ''')
 
     # Route to handle to file deletions
     @app.route('/delete_recording/<filename>', methods=['POST'])
+    @login_required
     def delete_recording(filename):
-        # Delete the audio file
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            print(f"Deleted audio file {file_path}")
+        try:
+            #Delete audio file
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"Deleted audio file {file_path}.")
+            else:
+                print(f"Audio file {file_path} not found.")
 
-        # Load the existing transcript data
+            #Remove recording and transcript entries from the database
+            from everstone.models import Recording, Transcript
+            recording = Recording.query.filter_by(filename=filename, user_id=current_user.id).first()
 
-        with open(TRANSCRIPTS_DATA_FILE, 'r') as file:
-            transcripts_data = json.load(file)
+            if recording:
+                #Delete associated transcript, if it exists
+                transcript = Transcript.query.filter_by(recording_id=recording.id).first()
+                if transcript:
+                    db.session.delete(transcript)
+                    print(f"Delete transcript for recording {filename}")
 
-        # Filter out the entry for the deleted file
-        transcripts_data = [entry for entry in transcripts_data if entry['filename'] != filename]
+                #Delete recording proper
+                db.session.delete(recording)
+                db.session.commit()
+                print(f"Deleted recording {filename} from database.")
+            else:
+                print(f"Recording with filename '{filename}' not found in database.")
 
-        # Write the updated transcripts data back to the transcripts data file
-        with open(TRANSCRIPTS_DATA_FILE, 'w') as file:
-            json.dump(transcripts_data, file, indent=4)
-        print(f"Removed transcript for {filename}")
-
-        flash(f"Recording {filename} and its transcript have been deleted.")
-        return redirect(url_for('recordings'))
-
+            flash(f"Recording '{filename}' and its transcript have been deleted.", 'success')
+            return redirect(url_for('recordings'))
+        except Exception as e:
+            print(f"Error during deletion: {str(e)}")
+            flash(f"A error occured while deleting recording '{filename}'.", 'danger')
+            return redirect(url_for('recordings'))
     return app
 
 # Create the Flask app using the factory pattern
