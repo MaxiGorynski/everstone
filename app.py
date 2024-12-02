@@ -477,9 +477,11 @@ def create_app():
     @login_required
     def search():
         query = request.form['query']
+        transcripts_data = load_transcripts_data()
 
         # Filtering the transcripts data to only include entries owned by the user
-        user_transcripts_data = [entry for entry in transcripts_data if entry['user_id'] == current_user.id]
+        user_transcripts_data = [entry for entry in transcripts_data if
+                                 'user_id' in entry and entry['user_id'] == current_user.id]
         results = search_bm25(query, user_transcripts_data)
 
         return render_template('search_results.html', results=results, search_term=query)
