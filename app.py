@@ -9,7 +9,7 @@ import json
 import os
 
 import librosa
-from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, render_template_string, flash
 from flask_login import LoginManager, current_user, login_required
 from everstone.models import Recording, Transcript
 from flask_sqlalchemy import SQLAlchemy
@@ -25,8 +25,6 @@ import nltk
 from nltk.corpus import stopwords
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import copy
 
 #Table of Contents #
 ### NLTK Data ad App Basics ###
@@ -177,10 +175,9 @@ def create_app():
         # If no transcript is found, generate it
         if not transcript:
             transcript = generate_transcript_webm(filename)
-            embedding = embedding_model.encode(transcript)
             # Add the new transcript data to the JSON file
-            save_transcript_data(filename, transcript, embedding)
-            print("Transcript generated and saved:", transcript)
+            save_transcript_data(filename, transcript)
+            print("Transcript generated:", transcript)
 
             #Save the transcript to the database
             new_transcript = Transcript(content=transcript, recording_id=recording.id)
@@ -243,7 +240,6 @@ def create_app():
 
         if filename not in existing_filenames:
             new_entry = {
-                "user_id": current_user.id,
                 "filename": filename,
                 "url": url,
                 "transcript": transcript_text,
@@ -308,14 +304,7 @@ def create_app():
         except Exception as e:
             return f"Error processing the file: {e}"
 
-    @app.route('/load_transcripts', methods=['GET'])
-    @login_required
-    def get_user_transcripts():
-        user_id = current_user.id
-        transcripts_data = load_transcripts_data(user_id=user_id)
-        return jsonify(transcripts_data)
-
-    def load_transcripts_data(user_id=None, filepath="transcripts_data.json"):
+    def load_transcripts_data(filepath="transcripts_data.json"):
         with open(filepath, 'r') as file:
             transcripts_data = json.load(file)
             # print(transcripts_data)
@@ -325,7 +314,7 @@ def create_app():
         unique_transcripts = []
 
         for entry in transcripts_data:
-            if entry['filename'] not in seen and (user_id is None or entry.get('user_id') == user_id):
+            if entry['filename'] not in seen:
                 seen.add(entry['filename'])
                 unique_transcripts.append(entry)
 
@@ -445,8 +434,7 @@ def create_app():
     def generate_embeddings(transcripts_data):
         # Ensure transcripts_data is preprocessed or cleaned if needed
         for entry in transcripts_data:
-            if 'embedding' not in entry or not entry['embedding']:
-                entry['embedding'] = embedding_model.encode(entry['transcript'])
+            entry['embedding'] = embedding_model.encode(entry['transcript'])
         return transcripts_data
 
     def save_transcripts_with_embeddings(transcripts_data):
@@ -489,11 +477,10 @@ def create_app():
     @login_required
     def search():
         query = request.form['query']
-        transcripts_data = load_transcripts_data()
 
         # Filtering the transcripts data to only include entries owned by the user
-        #user_transcripts_data = [entry for entry in transcripts_data if 'user_id' in entry and entry['user_id'] == current_user.id]
-        results = search_bm25(query, transcripts_data)
+        user_transcripts_data = [entry for entry in transcripts_data if entry['user_id'] == current_user.id]
+        results = search_bm25(query, user_transcripts_data)
 
         return render_template('search_results.html', results=results, search_term=query)
 
