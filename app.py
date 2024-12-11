@@ -368,7 +368,10 @@ def create_app():
         # Tokenisation of each transcript for BM25 search
         bm25_corpus = []
         for entry in transcripts_data:
-            processed_text = preprocess_text(entry["transcript"])
+            combined_text = entry.get("title", "") + " " + entry.get("transcript", "")
+            print(f"Combined text for BM25: {combined_text}")
+            processed_text = preprocess_text(combined_text)
+            print(f"Processed text: {processed_text}")
             bm25_corpus.append(processed_text)
         return bm25_corpus
 
@@ -422,6 +425,7 @@ def create_app():
         # Retrieve the top results and corresponding transcript
         top_results = [(transcripts_data[i]['file_name'], transcripts_data[i]['transcript'], bm25_scores[i]) for i in
                        ranked_indices[:5]]
+
         return top_results
 
     def search_bm25(query, transcripts_data):
@@ -492,7 +496,7 @@ def create_app():
         transcripts_data = load_transcripts_data()
 
         # Filtering the transcripts data to only include entries owned by the user
-        #user_transcripts_data = [entry for entry in transcripts_data if 'user_id' in entry and entry['user_id'] == current_user.id]
+        user_transcripts_data = [entry for entry in transcripts_data if 'user_id' in entry and entry['user_id'] == current_user.id]
         results = search_bm25(query, transcripts_data)
 
         return render_template('search_results.html', results=results, search_term=query)
