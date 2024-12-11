@@ -27,6 +27,7 @@ from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import copy
+import re
 
 #Table of Contents #
 ### NLTK Data ad App Basics ###
@@ -190,7 +191,10 @@ def create_app():
 
         # Highlight the search term in transcript if present
         if search_term:
-            highlighted_transcript = transcript.replace(search_term, f"<b>{search_term}</b>")
+            #Regex for case-insensitive replacement
+            pattern = re.compile(re.escape(search_term), re.IGNORECASE)
+            highlighted_transcript = pattern.sub(f'<b>{search_term}</b>', transcript)
+            #highlighted_transcript = transcript.replace(search_term, f"<b>{search_term}</b>")
             highlighted_transcript = Markup(highlighted_transcript)  # Mark the text as safe HTML for rendering
             print("Highlighted transcript:", highlighted_transcript)
         else:
@@ -369,9 +373,9 @@ def create_app():
         bm25_corpus = []
         for entry in transcripts_data:
             combined_text = entry.get("title", "") + " " + entry.get("transcript", "")
-            print(f"Combined text for BM25: {combined_text}")
+            #print(f"Combined text for BM25: {combined_text}")
             processed_text = preprocess_text(combined_text)
-            print(f"Processed text: {processed_text}")
+            #print(f"Processed text: {processed_text}")
             bm25_corpus.append(processed_text)
         return bm25_corpus
 
@@ -446,20 +450,24 @@ def create_app():
 
     embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
+    def preprocess_search_query(query):
+        return embedding_model.encode(query)
+
     def generate_embeddings(transcripts_data):
         # Ensure transcripts_data is preprocessed or cleaned if needed
         for entry in transcripts_data:
             if 'embedding' not in entry or not entry['embedding']:
                 entry['embedding'] = embedding_model.encode(entry['transcript'])
+            if 'filename_embedding' not in entry or not entry['filename_embedding']:
+                entry['filename_embedding'] = embedding_model.encode(entry['filename'])
         return transcripts_data
 
     def save_transcripts_with_embeddings(transcripts_data):
         # Convert ndarray to lists for JSON serialisation
         for entry in transcripts_data:
-            if 'embedding' in entry:
-                if isinstance(entry['embedding'], np.ndarray):
-                    # Convert ndarray to list
-                    entry['embedding'] = entry['embedding'].tolist()
+            for key in ['embedding', 'filename_embedding']:
+                if key in entry and isinstance(entry[key], np.ndarray):
+                    entry[key] = entry[key].tolist()
 
         with open('transcripts_data.json', 'w') as file:
             json.dump(transcripts_data, file, indent=4)
@@ -489,17 +497,73 @@ def create_app():
     save_transcripts_with_embeddings(transcripts_data)
 
     # Creating a search endpoint within the app
-    @app.route('/search', methods=['POST'])
+    @app.route('/search', methods=['POST', 'GET'])
     @login_required
     def search():
+        #GET logic
+        if request.method == 'GET':
+            query = request.args.get('query', '')
+            if query:
+                transcripts_data = load_transcripts_data()
+
+                user_transcripts_data = [entry for entry in transcripts_data if 'user_id' in entry and entry['user_id'] == current_user.id]
+                results = search_bm25(query, transcripts_data)
+
+                return render_template('search_results.html', results=results, search_term=query)
+
+            return render_template('search.html')
+
+        #POST logic
         query = request.form['query']
         transcripts_data = load_transcripts_data()
 
         # Filtering the transcripts data to only include entries owned by the user
         user_transcripts_data = [entry for entry in transcripts_data if 'user_id' in entry and entry['user_id'] == current_user.id]
-        results = search_bm25(query, transcripts_data)
 
-        return render_template('search_results.html', results=results, search_term=query)
+        #Preprocess the search query
+        query_embedding = preprocess_search_query(query)
+
+        #Adjust relevance scores for filenames based on embeddings
+        for entry in user_transcripts_data:
+            print(type(entry), entry)
+            if 'embedding' in entry:
+                #Use cosine similarity to score filename relevace
+                filename_similarity = cosine_similarity([query_embedding], [entry['embedding']]) [0][0]
+                entry['filename_score'] = filename_similarity
+
+        bm25_results = search_bm25(query, user_transcripts_data)
+
+        #Initialise final_results
+        final_results = []
+
+        #Merging BM25 scores with filename scores for combined ranking
+        for score, metadata in bm25_results:
+            filename_score = next(
+                (entry.get('filename_score', 0) for entry in user_transcripts_data if
+                 entry['filename'] == metadata['filename']),
+                0.0  # Default value if not found
+            )
+
+            #Cast filename_score to float
+            filename_score = float(filename_score)
+
+            #Combine BM25 and filename scores
+            combined_score = float(score) + filename_score
+
+            #Append to final results list
+            final_results.append({
+                'filename': metadata['filename'],
+                'combined_score': combined_score,
+                'score': score,
+                'url': f"{metadata['url']}?search_term={query}",
+                #'transcript': metadata['transcript'],
+            })
+
+        final_results.sort(key=lambda x: x['combined_score'], reverse=True)
+
+        #print("Final results for rendering:", final_results)
+
+        return render_template('search_results.html', results=final_results, search_term=query)
 
     #################### E5 - User Login ####################
 
@@ -604,4 +668,3 @@ for rule in app.url_map.iter_rules():
 if __name__ == '__main__':
     app = create_app()  # Calling our factory function
     app.run(host='0.0.0.0', port=5001, debug=True)  # Start the app
-
