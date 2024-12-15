@@ -294,7 +294,7 @@ def create_app():
                 audio_data = recogniser.record(source)
 
             transcript = recogniser.recognize_google(audio_data)
-            print(f"Generated transcript: {transcript}")
+            #print(f"Generated transcript: {transcript}") #Debug
 
             # Clean up the temporary file
             os.remove(wav_file_path)
@@ -324,6 +324,12 @@ def create_app():
             transcripts_data = json.load(file)
             # print(transcripts_data)
 
+        #Check for existing filenames in the directory [for preventing deleted files appearing in returns]
+        valid_filenames = set(os.listdir('static/uploads'))
+
+        #Filter old/deleted entries
+        transcripts_data = [entry for entry in transcripts_data if entry['filename'] in valid_filenames]
+
         # Use a set to track unique filenames
         seen = set()
         unique_transcripts = []
@@ -333,7 +339,28 @@ def create_app():
                 seen.add(entry['filename'])
                 unique_transcripts.append(entry)
 
+        #Save cleaned transcripts back to file and dump old ones
+        if len(unique_transcripts) < len(transcripts_data):
+            with open(filepath, 'w') as file:
+                json.dump(unique_transcripts, file, indent=4)
+            print("Cleaned stale entries from transcripts_data.json")
+
         return unique_transcripts
+
+    def update_filename_in_transcripts(old_filename, new_filename):
+        filepath = "transcripts_data.json"
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as file:
+                transcripts_data = json.load(file)
+
+            for entry in transcripts_data:
+                if entry['filename'] == old_filename:
+                    entry['filename'] == new_filename
+                    print(f"Updated filename from {old_filename} to {new_filename}")
+                    break
+
+            with open(filepath, 'w') as file:
+                json.dump(transcripts_data, file, indent=4)
 
     def generate_transcripts_for_all_files():
         # List all .webm files in the UPLOAD_FOLDER
@@ -391,7 +418,7 @@ def create_app():
         bm25_corpus = prepare_bm25_data(transcripts_data)
         bm25 = BM25Okapi(bm25_corpus)  # Initialising BM25 with tokenised corpus
         # Print the structure of bm25_corpus to check it
-        # print(bm25_corpus[:2])  # Print the first two entries to verify
+        # print(bm25_corpus[:2])  # Print the first two entries to verify, Debug
         # Storing the preprocessed data
         return transcripts_data, bm25
 
@@ -403,7 +430,7 @@ def create_app():
         preprocessed_query = preprocess_text(query)
         scores = bm25.get_scores(preprocessed_query)
 
-        # Print scores to verify
+        # Print scores to verify, Debug
         # for idx, score in enumerate(scores):
         # print(f"Transcript {idx + 1}: Score {score}")
 
@@ -485,7 +512,7 @@ def create_app():
             for audio_file in audio_files:
                 # Generate transcript for each audio file
                 transcript = generate_transcript_webm(audio_file)
-                print(f"Transcript for {audio_file}: {transcript}")
+                #print(f"Transcript for {audio_file}: {transcript}")  #Debug
 
         return load_transcripts_data()
 
@@ -525,7 +552,7 @@ def create_app():
 
         #Adjust relevance scores for filenames based on embeddings
         for entry in user_transcripts_data:
-            print(type(entry), entry)
+            #print(type(entry), entry)
             if 'embedding' in entry:
                 #Use cosine similarity to score filename relevace
                 filename_similarity = cosine_similarity([query_embedding], [entry['embedding']]) [0][0]
@@ -594,6 +621,8 @@ def create_app():
             return f"File '{new_name}' already exists. Choose a different name.", 400
 
         os.rename(old_file_path, new_file_path)
+
+        update_filename_in_transcripts(old_name, new_name)
 
         from everstone.models import Recording
         recording = Recording.query.filter_by(filename=old_name, user_id=current_user.id).first()

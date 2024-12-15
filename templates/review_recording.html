@@ -37,10 +37,10 @@
         <a href="/recordings">Back to all Everstone recordings</a>
     </div>
     <div>
-        <a href="{{ url_for('search', query=search_term) }}">Back to Search Results</a>
+        {% if search_term %}
+            <a href="{{ url_for('search', query=search_term) }}">Back to Search Results</a>
+        {% endif %}
     </div>
-
-
 </body>
 </html>
 {% endblock %}
